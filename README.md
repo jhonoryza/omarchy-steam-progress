@@ -53,7 +53,7 @@ reports a single JSON state:
 |-------|---------|--------|
 | `off` | Steam not running | hidden |
 | `boot` | client self-update in progress (a `Set percent complete: N` line appeared in `journalctl -t steam` within the last 3 minutes) | `Steam <bar> N%` |
-| `game` | game/content download in progress (an `appmanifest_*.acf` has StateFlags bit 1024 with `BytesToDownload > 0`; percentage = `BytesDownloaded / BytesToDownload`, aggregated across concurrent downloads) | `<game name> <bar> N%` |
+| `game` | game/content download in progress (an `appmanifest_*.acf` has StateFlags bit 1024 with `BytesToDownload > 0`; percentage = max of `BytesDownloaded` and the live allocated size of `steamapps/downloading/<appid>`, clamped to `BytesToDownload`, aggregated across concurrent downloads) | `<game name> <bar> N%` |
 | `idle` | Steam running, nothing downloading | hidden |
 
 Notifications fire on transitions: `boot → not boot` announces the client is
@@ -67,8 +67,11 @@ far more likely a paused or stalled download, so the widget stays quiet.
   network drops mid-update), the plugin may treat it as "finished" and fire
   the client-ready notification early. Steam usually retries on its own, and
   the progress bar reappears as soon as logging resumes.
-- Game progress comes from `appmanifest_*.acf`, which Steam rewrites in
-  chunks — the bar can hold steady for a few seconds at a time.
+- Game progress blends two sources: the `appmanifest_*.acf` byte counts
+  (Steam flushes them lazily, so they can lag minutes behind) and the
+  allocated size of `steamapps/downloading/<appid>` (live, but includes a
+  small per-file block-rounding overhead). The bar may therefore differ from
+  Steam's own download page by a point or two either way.
 - A game paused right at ≥95% could produce a premature "ready" notification.
   Rare, but possible.
 
