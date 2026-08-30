@@ -119,14 +119,24 @@ BarWidget {
     anchors.centerIn: parent
     spacing: 8
 
-    Text {
-      text: root.mode === "game" ? root.gameName : "Steam"
-      font.family: Style.font.family
-      font.pixelSize: Style.font.caption
-      color: Color.foreground
-      elide: Text.ElideRight
-      maximumWidth: 110
+    Item {
+      id: nameSlot
+      // Text has no maximumWidth, so cap the label via a sizing wrapper:
+      // short names keep their natural width, long ones get elided at 110px.
+      implicitWidth: Math.min(nameText.implicitWidth, 110)
+      implicitHeight: nameText.implicitHeight
       anchors.verticalCenter: parent.verticalCenter
+
+      Text {
+        id: nameText
+        width: parent.width
+        height: parent.height
+        text: root.mode === "game" ? root.gameName : "Steam"
+        font.family: Style.font.family
+        font.pixelSize: Style.font.caption
+        color: Color.foreground
+        elide: Text.ElideRight
+      }
     }
 
     Item {

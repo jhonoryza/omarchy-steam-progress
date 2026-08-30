@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "vm.steam-progress",
   "name": "Steam progress",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "author": "vm",
   "description": "Shows Steam bootstrap and game download progress",
   "kinds": [
