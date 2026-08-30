@@ -10,12 +10,15 @@ No more staring at a blank screen wondering why Steam hasn't opened.
 
 ## What it does
 
-- **Bar widget** — a compact `Steam ▓▓▓░░ 42%` readout in the bar (default:
-  center section) while Steam is downloading its client update
-- **Auto-hide** — the widget only appears while a download is actually in
-  progress; it disappears when Steam is closed or the update finishes
-- **Ready notification** — sends a single desktop notification the moment the
-  bootstrap download completes (never more than once per Steam session)
+- **Bar widget** — a compact live readout in the bar (default: center section):
+  - `Steam ▓▓▓░░ 57%` while Steam downloads its client self-update
+  - `Europa ▓▓▓░░ 29%` while a game / content download runs (name of the
+    largest active download; percentages are aggregated across concurrent
+    downloads)
+- **Auto-hide** — the widget only appears while something is actually
+  downloading; it disappears when Steam is closed or idle
+- **Ready notifications** — one-time pings (never spam) when the client
+  update finishes, and when a tracked game download completes
 
 ## Requirements
 
@@ -44,27 +47,30 @@ omarchy plugin remove vm.steam-progress
 ## How it works
 
 Every 2 seconds the widget runs a small probe (`steam-progress.sh`) that
-checks:
+reports a single JSON state:
 
-1. Is `~/.local/share/Steam/steam.sh` running?
-2. If yes, did Steam log a `Set percent complete: N` line in the last
-   3 minutes? (via `journalctl -t steam`)
+| State | Meaning | Widget |
+|-------|---------|--------|
+| `off` | Steam not running | hidden |
+| `boot` | client self-update in progress (a `Set percent complete: N` line appeared in `journalctl -t steam` within the last 3 minutes) | `Steam <bar> N%` |
+| `game` | game/content download in progress (an `appmanifest_*.acf` has StateFlags bit 1024 with `BytesToDownload > 0`; percentage = `BytesDownloaded / BytesToDownload`, aggregated across concurrent downloads) | `<game name> <bar> N%` |
+| `idle` | Steam running, nothing downloading | hidden |
 
-| Probe result | Meaning | Widget shows |
-|--------------|---------|--------------|
-| Steam not running | nothing to track | hidden |
-| percent line found | download in progress | `Steam <bar> N%` |
-| Steam running, no recent line | bootstrap finished | hidden + one-time notification |
+Notifications fire on transitions: `boot → not boot` announces the client is
+ready (once per Steam session); `game → not game` announces the game is ready,
+but only if the last seen progress was ≥95% — below that the transition is
+far more likely a paused or stalled download, so the widget stays quiet.
 
-The 3-minute window keeps stale percentages from older Steam sessions from
-showing up, since Steam logs progress roughly every second while downloading.
+### Known limitations
 
-### Known limitation
-
-If a download stalls completely for more than 3 minutes (e.g. the network
-drops mid-update), the plugin may treat it as "finished" and fire the
-notification early. Steam usually retries on its own, and the progress bar
-reappears as soon as logging resumes.
+- If a client download stalls completely for more than 3 minutes (e.g. the
+  network drops mid-update), the plugin may treat it as "finished" and fire
+  the client-ready notification early. Steam usually retries on its own, and
+  the progress bar reappears as soon as logging resumes.
+- Game progress comes from `appmanifest_*.acf`, which Steam rewrites in
+  chunks — the bar can hold steady for a few seconds at a time.
+- A game paused right at ≥95% could produce a premature "ready" notification.
+  Rare, but possible.
 
 ## Files
 

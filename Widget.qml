@@ -4,53 +4,80 @@ import Quickshell.Io
 import qs.Commons
 import qs.Ui
 
-// Bar widget tracking the Steam bootstrap / self-update download.
-// Hidden while Steam is closed or not updating; shows a compact
-// "Steam <bar> NN%" readout while the download runs.
+// Bar widget tracking Steam downloads:
+//   boot mode - client bootstrap / self-update (from the Steam journal)
+//   game mode - game/content download (from appmanifest_*.acf byte counts)
+// Hidden while Steam is closed or idle. Fires one-time notifications when
+// the client update or a tracked game download finishes.
 BarWidget {
   id: root
   moduleName: "vm.steam-progress"
 
   property bool active: false
   property int percent: 0
+  property string mode: "boot"      // "boot" | "game"
+  property string gameName: ""
+
   property string lastState: "off"
-  property bool notified: false
+  property int lastPercent: 0
+  property string lastGame: ""
+  property bool notifiedBoot: false
+  property var notifiedGames: ({})
+
+  function clamp(p) { return Math.max(0, Math.min(100, Math.round(p))) }
 
   function apply(line) {
-    const s = String(line).trim()
-    const parts = s.split(":")
-    const state = parts[0]
+    let data
+    try { data = JSON.parse(String(line).trim()) } catch (e) { return }
+    const state = data.state || "off"
     const prev = root.lastState
     root.lastState = state
-    root.active = state === "down"
 
-    if (state === "down") {
-      const p = parseInt(parts[1], 10)
-      root.percent = isNaN(p) ? 0 : Math.max(0, Math.min(100, p))
+    if (state === "boot") {
+      root.active = true
+      root.mode = "boot"
+      root.percent = root.clamp(data.pct || 0)
+    } else if (state === "game") {
+      root.active = true
+      root.mode = "game"
+      root.gameName = data.name || "Steam"
+      root.percent = root.clamp(data.pct || 0)
+    } else {
+      root.active = false
     }
 
-    // Bootstrap just finished: fire the "ready" notification exactly once
-    // per Steam session; the guard resets when Steam exits.
-    if (prev === "down" && state === "done" && !root.notified) {
-      root.notified = true
-      root.notifyReady()
+    // Client bootstrap just finished: one "ready" ping per Steam session.
+    if (prev === "boot" && state !== "boot" && !root.notifiedBoot) {
+      root.notifiedBoot = true
+      root.notify("Steam siap \u{1F3AE}", "Client update selesai \u2014 Steam sudah bisa dibuka.")
     }
+    if (state === "off") root.notifiedBoot = false
 
-    if (state === "off") root.notified = false
+    // A game we tracked at >=95% left the game state: it finished. (Below 95%
+    // the transition is far more likely a pause or a stall, so stay quiet.)
+    if (prev === "game" && state !== "game" && root.lastPercent >= 95 && root.lastGame !== "") {
+      const g = root.lastGame
+      if (!root.notifiedGames[g]) {
+        const map = Object.assign({}, root.notifiedGames)
+        map[g] = true
+        root.notifiedGames = map
+        root.notify(g + " siap dimainkan \u{1F3AE}", "Download selesai \u2014 selamat bermain!")
+      }
+    }
+    if (state === "game") {
+      root.lastPercent = root.percent
+      root.lastGame = root.gameName
+    }
+  }
+
+  function notify(title, body) {
+    if (notifyProc.running) return
+    notifyProc.command = ["/usr/bin/notify-send", "-a", "Steam", "-i", "steam", title, body]
+    notifyProc.running = true
   }
 
   function refresh() {
     if (!probe.running) probe.running = true
-  }
-
-  function notifyReady() {
-    if (notifyProc.running) return
-    notifyProc.command = ["/usr/bin/notify-send",
-      "-a", "Steam",
-      "-i", "steam",
-      "Steam siap \u{1F3AE}",
-      "Update selesai \u2014 Steam sudah bisa dibuka."]
-    notifyProc.running = true
   }
 
   visible: active
@@ -93,10 +120,12 @@ BarWidget {
     spacing: 8
 
     Text {
-      text: "Steam"
+      text: root.mode === "game" ? root.gameName : "Steam"
       font.family: Style.font.family
       font.pixelSize: Style.font.caption
       color: Color.foreground
+      elide: Text.ElideRight
+      maximumWidth: 110
       anchors.verticalCenter: parent.verticalCenter
     }
 
