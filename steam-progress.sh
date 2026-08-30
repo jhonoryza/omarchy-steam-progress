@@ -25,6 +25,12 @@ if [ -n "$pct" ]; then
 fi
 
 # 2) Game / content downloads.
+# Byte counts in appmanifest_*.acf are written lazily (Steam flushes them at
+# checkpoints), so they can lag minutes behind the real download. The live
+# source is the allocated size of steamapps/downloading/<appid>: Steam
+# preallocates files sparse (apparent size overcounts), while allocated
+# blocks track bytes actually written. Take the max of the two, clamped to
+# BytesToDownload.
 sum_to=0
 sum_dl=0
 big_to=0
@@ -36,6 +42,11 @@ for f in "$HOME"/.local/share/Steam/steamapps/appmanifest_*.acf; do
   to=$(grep -m1 '"BytesToDownload"' "$f" | tr -dc '0-9'); to=${to:-0}
   dl=$(grep -m1 '"BytesDownloaded"' "$f" | tr -dc '0-9'); dl=${dl:-0}
   (( to > 0 )) || continue
+  appid=$(basename "$f" .acf); appid=${appid#appmanifest_}
+  live=$(du -sB1 "$HOME/.local/share/Steam/steamapps/downloading/$appid" 2>/dev/null | awk '{print $1}')
+  live=${live:-0}
+  (( live > dl )) && dl=$live
+  (( dl > to )) && dl=$to
   name=$(grep -m1 '"name"' "$f" | awk -F'"' '{print $4}')
   sum_to=$((sum_to + to))
   sum_dl=$((sum_dl + dl))
