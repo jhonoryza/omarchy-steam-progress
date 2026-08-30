@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "id": "vm.steam-progress",
+  "name": "Steam progress",
+  "version": "1.0.0",
+  "author": "vm",
+  "description": "Shows Steam bootstrap / self-update download progress",
+  "kinds": [
+    "bar-widget"
+  ],
+  "entryPoints": {
+    "barWidget": "Widget.qml"
+  },
+  "barWidget": {
+    "displayName": "Steam progress",
+    "description": "Mini progress bar for the Steam self-update download",
+    "category": "Status",
+    "allowMultiple": false,
+    "defaultSection": "center"
+  }
+}
