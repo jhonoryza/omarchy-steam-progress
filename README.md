@@ -6,7 +6,7 @@ one-time "Steam is ready" notification when it finishes.
 
 No more staring at a blank screen wondering why Steam hasn't opened.
 
-<!-- Add a screenshot here: grim -g "$(hyprctl -j activewindow | jq -r .at)" ... -->
+![Steam progress preview](preview.png)
 
 ## What it does
 
@@ -29,7 +29,7 @@ No more staring at a blank screen wondering why Steam hasn't opened.
 ## Install
 
 ```bash
-omarchy plugin add https://github.com/<your-user>/omarchy-steam-progress.git --enable
+omarchy plugin add https://github.com/jhonoryza/omarchy-steam-progress --enable
 ```
 
 `--enable` places the widget in its default bar section (center). To move it:

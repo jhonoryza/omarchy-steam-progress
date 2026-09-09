@@ -3,8 +3,10 @@
   "id": "vm.steam-progress",
   "name": "Steam progress",
   "version": "1.1.2",
-  "author": "vm",
+  "author": "jhonoryza",
+  "license": "MIT",
   "description": "Shows Steam bootstrap and game download progress",
+  "homepage": "https://github.com/jhonoryza/omarchy-steam-progress",
   "kinds": [
     "bar-widget"
   ],
@@ -14,7 +16,7 @@
   "barWidget": {
     "displayName": "Steam progress",
     "description": "Mini progress bar for the Steam self-update download",
-    "category": "Status",
+    "category": "System",
     "allowMultiple": false,
     "defaultSection": "center"
   }
